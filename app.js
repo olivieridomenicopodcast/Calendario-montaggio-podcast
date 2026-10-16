@@ -108,10 +108,12 @@ function renderSlots() {
     (day[s.id] || []).forEach((it) => {
       const row = document.createElement("div");
       row.className = "item" + (it.done ? " done" : "");
-      row.innerHTML = `<input type="checkbox" ${it.done ? "checked" : ""} aria-label="Fatto"><span></span><button aria-label="Elimina">🗑</button>`;
+      row.innerHTML = `<input type="checkbox" ${it.done ? "checked" : ""} aria-label="Fatto"><span></span><button class="edit" aria-label="Modifica">✏️</button><button class="del" aria-label="Elimina">🗑</button>`;
       row.querySelector("span").textContent = it.text;
+      row.querySelector("span").addEventListener("click", () => editItem(row, it));
+      row.querySelector(".edit").addEventListener("click", () => editItem(row, it));
       row.querySelector("input").addEventListener("change", (e) => { it.done = e.target.checked; save(); renderSlots(); renderAll(); });
-      row.querySelector("button").addEventListener("click", () => removeItem(s.id, it.id));
+      row.querySelector(".del").addEventListener("click", () => removeItem(s.id, it.id));
       sec.appendChild(row);
     });
     const form = document.createElement("form");
@@ -125,6 +127,29 @@ function renderSlots() {
     sec.appendChild(form);
     wrap.appendChild(sec);
   });
+}
+
+function editItem(row, it) {
+  const span = row.querySelector("span");
+  const input = document.createElement("input");
+  input.className = "edit-input";
+  input.value = it.text;
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+  let finished = false;
+  const finish = (commit) => {
+    if (finished) return;
+    finished = true;
+    const v = input.value.trim();
+    if (commit && v) { it.text = v; save(); }
+    renderSlots(); renderAll();
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); finish(true); }
+    if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); finish(false); }
+  });
+  input.addEventListener("blur", () => finish(true));
 }
 
 function addItem(slot, text) {

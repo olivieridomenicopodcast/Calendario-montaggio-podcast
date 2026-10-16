@@ -80,3 +80,5 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
 #settingsDialog input { display: block; width: 100%; margin-top: 4px; font: inherit; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
 .hint { font-size: .85rem; color: var(--muted); margin: 0; }
 #settingsDialog .add { margin-top: 14px; }
+.item span { cursor: text; }
+.edit-input { flex: 1; min-width: 0; font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--accent); background: var(--card); color: var(--text); }
