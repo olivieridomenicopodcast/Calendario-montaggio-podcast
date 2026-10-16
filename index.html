@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Calendario montaggio podcast</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#5b5bd6">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
   <header class="topbar">
@@ -14,6 +18,12 @@
       <h2 id="monthLabel"></h2>
       <button id="next" aria-label="Mese successivo">›</button>
       <button id="today" class="ghost">Oggi</button>
+    </div>
+    <div class="sync">
+      <button id="pullBtn" class="ghost">⬇ Pull</button>
+      <button id="pushBtn" class="ghost">⬆ Push</button>
+      <button id="settingsBtn" class="ghost" aria-label="Impostazioni sync">⚙️</button>
+      <span id="syncStatus" class="status"></span>
     </div>
   </header>
 
@@ -38,6 +48,17 @@
       <button class="close" aria-label="Chiudi">✕</button>
     </form>
     <div id="slots"></div>
+  </dialog>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" class="dlg-head">
+      <h2>Sincronizzazione GitHub</h2>
+      <button class="close" aria-label="Chiudi">✕</button>
+    </form>
+    <p class="hint">I dati vengono salvati in un Gist segreto del tuo account. Serve un token con permesso <b>gist</b>. Il token resta solo in questo browser.</p>
+    <label>Token GitHub<input id="tokenInput" type="password" autocomplete="off" placeholder="ghp_… / github_pat_…"></label>
+    <label>ID Gist (lascia vuoto: lo trovo o lo creo io)<input id="gistInput" autocomplete="off"></label>
+    <div class="add"><button id="saveSettings">Salva</button><button id="clearSettings" class="ghost">Rimuovi token</button></div>
   </dialog>
 
   <script src="app.js"></script>

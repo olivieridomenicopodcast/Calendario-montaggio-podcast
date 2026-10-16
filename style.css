@@ -72,3 +72,11 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
   .chip { font-size: .6rem; padding: 1px 2px; }
   .nav h2 { font-size: 1rem; }
 }
+
+.sync { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+.status { font-size: .8rem; color: var(--muted); }
+.status.err { color: #d33; }
+#settingsDialog label { display: block; font-size: .85rem; margin-top: 10px; }
+#settingsDialog input { display: block; width: 100%; margin-top: 4px; font: inherit; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+.hint { font-size: .85rem; color: var(--muted); margin: 0; }
+#settingsDialog .add { margin-top: 14px; }

@@ -168,3 +168,100 @@ $("importFile").addEventListener("change", async (e) => {
 
 $("weekdays").innerHTML = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((d) => `<div>${d}</div>`).join("");
 renderAll();
+
+// ---------- Sincronizzazione via GitHub Gist ----------
+const CFG_KEY = "calendario-montaggio-sync";
+const GIST_FILE = "calendario-montaggio.json";
+const cfg = (() => { try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch { return {}; } })();
+const saveCfg = () => { try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch {} };
+
+function status(msg, err) {
+  const el = $("syncStatus");
+  el.textContent = msg;
+  el.className = "status" + (err ? " err" : "");
+}
+
+async function gh(path, opts = {}) {
+  const res = await fetch("https://api.github.com" + path, {
+    ...opts,
+    headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${cfg.token}`, "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error(res.status === 401 ? "Token non valido" : res.status === 404 ? "Gist non trovato" : `Errore GitHub ${res.status}`);
+  return res.json();
+}
+
+async function findGist() {
+  if (cfg.gistId) return cfg.gistId;
+  for (let page = 1; page <= 5; page++) {
+    const list = await gh(`/gists?per_page=100&page=${page}`);
+    const hit = list.find((g) => g.files && g.files[GIST_FILE]);
+    if (hit) { cfg.gistId = hit.id; saveCfg(); return hit.id; }
+    if (list.length < 100) break;
+  }
+  return null;
+}
+
+function needToken() {
+  if (cfg.token) return false;
+  status("Imposta prima il token (⚙️)", true);
+  $("settingsDialog").showModal();
+  return true;
+}
+
+async function pull() {
+  if (needToken()) return;
+  try {
+    status("Pull in corso…");
+    const id = await findGist();
+    if (!id) return status("Nessun Gist trovato: fai prima un Push", true);
+    const g = await gh(`/gists/${id}`);
+    const f = g.files[GIST_FILE];
+    if (!f) throw new Error("File non presente nel Gist");
+    const content = f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
+    const remote = JSON.parse(content);
+    if (!confirm("Sostituire i dati locali con quelli scaricati?")) return status("Pull annullato");
+    data = remote; save(); renderAll();
+    status("Pull completato " + new Date().toLocaleTimeString("it-IT"));
+  } catch (e) { status(e.message, true); }
+}
+
+async function push() {
+  if (needToken()) return;
+  try {
+    status("Push in corso…");
+    const body = { files: { [GIST_FILE]: { content: JSON.stringify(data, null, 2) } } };
+    const id = await findGist();
+    if (id) await gh(`/gists/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+    else {
+      const g = await gh("/gists", { method: "POST", body: JSON.stringify({ description: "Calendario montaggio podcast", public: false, ...body }) });
+      cfg.gistId = g.id; saveCfg();
+    }
+    status("Push completato " + new Date().toLocaleTimeString("it-IT"));
+  } catch (e) { status(e.message, true); }
+}
+
+$("pullBtn").addEventListener("click", pull);
+$("pushBtn").addEventListener("click", push);
+$("settingsBtn").addEventListener("click", () => {
+  $("tokenInput").value = cfg.token || "";
+  $("gistInput").value = cfg.gistId || "";
+  $("settingsDialog").showModal();
+});
+$("saveSettings").addEventListener("click", (e) => {
+  e.preventDefault();
+  cfg.token = $("tokenInput").value.trim();
+  cfg.gistId = $("gistInput").value.trim();
+  saveCfg();
+  $("settingsDialog").close();
+  status("Impostazioni salvate");
+});
+$("clearSettings").addEventListener("click", (e) => {
+  e.preventDefault();
+  delete cfg.token; delete cfg.gistId; saveCfg();
+  $("tokenInput").value = ""; $("gistInput").value = "";
+  status("Token rimosso");
+});
+
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
