@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calendario montaggio podcast</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>🎧 Calendario montaggio</h1>
+    <div class="nav">
+      <button id="prev" aria-label="Mese precedente">‹</button>
+      <h2 id="monthLabel"></h2>
+      <button id="next" aria-label="Mese successivo">›</button>
+      <button id="today" class="ghost">Oggi</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid weekdays" id="weekdays"></div>
+    <div class="grid days" id="days"></div>
+
+    <section class="upcoming">
+      <h3>Prossimi giorni</h3>
+      <div id="upcomingList"></div>
+    </section>
+
+    <footer class="tools">
+      <button id="exportBtn" class="ghost">Esporta backup</button>
+      <label class="ghost btn">Importa backup<input type="file" id="importFile" accept="application/json" hidden></label>
+    </footer>
+  </main>
+
+  <dialog id="dayDialog">
+    <form method="dialog" class="dlg-head">
+      <h2 id="dayTitle"></h2>
+      <button class="close" aria-label="Chiudi">✕</button>
+    </form>
+    <div id="slots"></div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
