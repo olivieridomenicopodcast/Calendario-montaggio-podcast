@@ -6,8 +6,13 @@ const SLOTS = [
 ];
 const MAX_PREVIEW = 4;
 
-// data: { "YYYY-MM-DD": { mattino: [{id, text, done}], pomeriggio: [], sera: [] } }
+const TAGS_KEY = "calendario-montaggio-tags-v1";
+const TAG_COLORS = ["#e5484d", "#f5a524", "#30a46c", "#17a2b8", "#5b5bd6", "#8e5bd6", "#d6409f", "#8b8d98"];
+
+// data: { "YYYY-MM-DD": { mattino: [{id, text, done}], pomeriggio: [], sera: [], tags: { mattino: [tagId], ... } } }
+// tags: [{ id, name, color, notes }]  (la legenda: indicazioni di montaggio per progetto/cliente)
 let data = load();
+let tags = loadTags();
 let view = new Date();
 view.setDate(1);
 let openDate = null;
@@ -20,21 +25,87 @@ const fromKey = (k) => { const [y, m, d] = k.split("-").map(Number); return new 
 function load() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
 }
-function save() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+function loadTags() {
+  try { const t = JSON.parse(localStorage.getItem(TAGS_KEY)); return Array.isArray(t) ? t : []; } catch { return []; }
 }
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(TAGS_KEY, JSON.stringify(tags));
+  } catch {}
+}
+
+// Formato di backup/sync: giorni + legenda. I vecchi backup (solo giorni) restano leggibili.
+const payload = () => ({ version: 2, days: data, tags });
+function applyPayload(p) {
+  if (!p || typeof p !== "object" || Array.isArray(p)) throw new Error("Formato non valido");
+  if (p.version === 2 && p.days && typeof p.days === "object") {
+    data = p.days;
+    tags = Array.isArray(p.tags) ? p.tags : [];
+  } else data = p;
+  save(); renderAll();
+}
+
+const tagById = (id) => tags.find((t) => t.id === id);
+const slotTags = (k, slotId) => (((data[k] || {}).tags || {})[slotId] || []).map(tagById).filter(Boolean);
+const hasContent = (k) => entries(k).length > 0;
 
 function entries(k) {
   const day = data[k] || {};
-  return SLOTS.flatMap((s) => (day[s.id] || []).map((it) => ({ ...it, slot: s.id })));
+  return SLOTS.flatMap((s) => [
+    ...slotTags(k, s.id).map((tag) => ({ kind: "tag", tag, slot: s.id })),
+    ...(day[s.id] || []).map((it) => ({ ...it, kind: "item", slot: s.id })),
+  ]);
+}
+
+function pruneDay(k) {
+  const day = data[k];
+  if (!day) return;
+  const emptyTags = SLOTS.every((s) => !((day.tags || {})[s.id] || []).length);
+  if (emptyTags && SLOTS.every((s) => !(day[s.id] || []).length)) delete data[k];
 }
 
 function chip(it) {
   const el = document.createElement("div");
+  if (it.kind === "tag") {
+    el.className = "chip tag";
+    el.style.setProperty("--tc", it.tag.color);
+    el.textContent = it.tag.name;
+    el.title = it.tag.name;
+    return el;
+  }
   el.className = `chip ${it.slot}${it.done ? " done" : ""}`;
   el.textContent = it.text;
   el.title = it.text;
   return el;
+}
+
+// Indicazioni di montaggio di un tag: ridotte a poche righe, con "Mostra tutto".
+function notesBlock(tag) {
+  const wrap = document.createElement("div");
+  wrap.className = "notes";
+  wrap.style.setProperty("--tc", tag.color);
+  const notes = (tag.notes || "").trim();
+  const title = document.createElement("strong");
+  title.textContent = `📋 ${tag.name}`;
+  wrap.appendChild(title);
+  const body = document.createElement("div");
+  body.className = "notes-body clamp";
+  body.textContent = notes || "Nessuna indicazione (aggiungila dalla Legenda).";
+  wrap.appendChild(body);
+  if (notes.length > 90 || notes.split("\n").length > 2) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "link";
+    btn.textContent = "Mostra tutto";
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = body.classList.toggle("clamp");
+      btn.textContent = open ? "Mostra tutto" : "Mostra meno";
+    });
+    wrap.appendChild(btn);
+  }
+  return wrap;
 }
 
 function renderCalendar() {
@@ -68,7 +139,7 @@ function renderUpcoming() {
   const box = $("upcomingList");
   box.innerHTML = "";
   const todayK = key(new Date());
-  const keys = Object.keys(data).filter((k) => k >= todayK && entries(k).length).sort().slice(0, 7);
+  const keys = Object.keys(data).filter((k) => k >= todayK && hasContent(k)).sort().slice(0, 7);
   if (!keys.length) {
     box.innerHTML = `<p class="empty">Niente in programma. Clicca un giorno per aggiungere un montaggio.</p>`;
     return;
@@ -78,10 +149,15 @@ function renderUpcoming() {
     row.className = "up-day";
     const label = fromKey(k).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
     row.innerHTML = `<strong>${label}</strong>`;
-    entries(k).forEach((it) => {
-      const c = chip(it);
-      c.textContent = `${SLOTS.find((s) => s.id === it.slot).label} — ${it.text}`;
-      row.appendChild(c);
+    SLOTS.forEach((s) => {
+      const list = entries(k).filter((it) => it.slot === s.id);
+      if (!list.length) return;
+      const h = document.createElement("div");
+      h.className = "up-slot";
+      h.textContent = s.label;
+      row.appendChild(h);
+      list.forEach((it) => row.appendChild(chip(it)));
+      slotTags(k, s.id).forEach((tag) => row.appendChild(notesBlock(tag)));
     });
     row.addEventListener("click", () => openDay(k));
     box.appendChild(row);
@@ -105,6 +181,23 @@ function renderSlots() {
     const sec = document.createElement("div");
     sec.className = `slot ${s.id}`;
     sec.innerHTML = `<h3>${s.label}</h3>`;
+    const active = ((day.tags || {})[s.id] || []);
+    const picker = document.createElement("div");
+    picker.className = "picker";
+    if (!tags.length) {
+      picker.innerHTML = `<span class="empty">Nessun tag: creali dalla 🏷 Legenda.</span>`;
+    }
+    tags.forEach((tag) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "pill" + (active.includes(tag.id) ? " on" : "");
+      b.style.setProperty("--tc", tag.color);
+      b.textContent = tag.name;
+      b.addEventListener("click", () => toggleSlotTag(s.id, tag.id));
+      picker.appendChild(b);
+    });
+    sec.appendChild(picker);
+    slotTags(openDate, s.id).forEach((tag) => sec.appendChild(notesBlock(tag)));
     (day[s.id] || []).forEach((it) => {
       const row = document.createElement("div");
       row.className = "item" + (it.done ? " done" : "");
@@ -164,9 +257,57 @@ function addItem(slot, text) {
 function removeItem(slot, id) {
   const day = data[openDate];
   day[slot] = day[slot].filter((it) => it.id !== id);
-  if (SLOTS.every((s) => !(day[s.id] || []).length)) delete data[openDate];
+  pruneDay(openDate);
   save(); renderSlots(); renderAll();
 }
+
+function toggleSlotTag(slot, tagId) {
+  const day = (data[openDate] ||= {});
+  const map = (day.tags ||= {});
+  const list = (map[slot] ||= []);
+  const i = list.indexOf(tagId);
+  if (i >= 0) list.splice(i, 1); else list.push(tagId);
+  pruneDay(openDate);
+  save(); renderSlots(); renderAll();
+}
+
+// ---------- Legenda dei tag ----------
+function renderTags() {
+  const box = $("tagsList");
+  box.innerHTML = "";
+  if (!tags.length) box.innerHTML = `<p class="empty">Ancora nessun tag. Creane uno per ogni podcast o cliente.</p>`;
+  tags.forEach((tag) => {
+    const card = document.createElement("div");
+    card.className = "tag-card";
+    card.style.setProperty("--tc", tag.color);
+    card.innerHTML = `<div class="tag-row"><input type="color" aria-label="Colore"><input class="tag-name" placeholder="Nome (es. Marchesano)"><button type="button" class="del" aria-label="Elimina tag">🗑</button></div><textarea rows="4" placeholder="Indicazioni di montaggio: stile, musiche, formato, cose da ricordare…"></textarea>`;
+    const [color, name] = card.querySelectorAll("input");
+    const notes = card.querySelector("textarea");
+    color.value = tag.color;
+    name.value = tag.name;
+    notes.value = tag.notes || "";
+    color.addEventListener("input", () => { tag.color = color.value; card.style.setProperty("--tc", tag.color); });
+    color.addEventListener("change", () => { save(); renderAll(); });
+    name.addEventListener("change", () => { tag.name = name.value.trim() || "Senza nome"; save(); renderAll(); });
+    notes.addEventListener("change", () => { tag.notes = notes.value; save(); renderAll(); });
+    card.querySelector(".del").addEventListener("click", () => {
+      if (!confirm(`Eliminare il tag "${tag.name}"? Sparirà anche dai giorni in cui l'hai usato.`)) return;
+      tags = tags.filter((t) => t !== tag);
+      save(); renderTags(); renderAll();
+    });
+    box.appendChild(card);
+  });
+}
+
+$("tagsBtn").addEventListener("click", () => { renderTags(); $("tagsDialog").showModal(); });
+$("addTag").addEventListener("click", () => {
+  tags.push({ id: String(Date.now()), name: "Nuovo tag", color: TAG_COLORS[tags.length % TAG_COLORS.length], notes: "" });
+  save(); renderTags(); renderAll();
+  const names = $("tagsList").querySelectorAll(".tag-name");
+  const last = names[names.length - 1];
+  last.focus(); last.select();
+});
+$("tagsDialog").addEventListener("close", renderAll);
 
 $("prev").addEventListener("click", () => { view.setMonth(view.getMonth() - 1); renderAll(); });
 $("next").addEventListener("click", () => { view.setMonth(view.getMonth() + 1); renderAll(); });
@@ -175,7 +316,7 @@ $("dayDialog").addEventListener("click", (e) => { if (e.target === $("dayDialog"
 
 $("exportBtn").addEventListener("click", () => {
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(payload(), null, 2)], { type: "application/json" }));
   a.download = `calendario-montaggio-${key(new Date())}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
@@ -186,7 +327,7 @@ $("importFile").addEventListener("change", async (e) => {
   try {
     const parsed = JSON.parse(await file.text());
     if (typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
-    if (confirm("Sostituire i dati attuali con il backup?")) { data = parsed; save(); renderAll(); }
+    if (confirm("Sostituire i dati attuali con il backup?")) applyPayload(parsed);
   } catch { alert("File non valido."); }
   e.target.value = "";
 });
@@ -245,7 +386,7 @@ async function pull() {
     const content = f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
     const remote = JSON.parse(content);
     if (!confirm("Sostituire i dati locali con quelli scaricati?")) return status("Pull annullato");
-    data = remote; save(); renderAll();
+    applyPayload(remote);
     status("Pull completato " + new Date().toLocaleTimeString("it-IT"));
   } catch (e) { status(e.message, true); }
 }
@@ -254,7 +395,7 @@ async function push() {
   if (needToken()) return;
   try {
     status("Push in corso…");
-    const body = { files: { [GIST_FILE]: { content: JSON.stringify(data, null, 2) } } };
+    const body = { files: { [GIST_FILE]: { content: JSON.stringify(payload(), null, 2) } } };
     const id = await findGist();
     if (id) await gh(`/gists/${id}`, { method: "PATCH", body: JSON.stringify(body) });
     else {

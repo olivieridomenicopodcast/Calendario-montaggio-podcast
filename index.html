@@ -22,6 +22,7 @@
     <div class="sync">
       <button id="pullBtn" class="ghost">⬇ Pull</button>
       <button id="pushBtn" class="ghost">⬆ Push</button>
+      <button id="tagsBtn" class="ghost">🏷 Legenda</button>
       <button id="settingsBtn" class="ghost" aria-label="Impostazioni sync">⚙️</button>
       <span id="syncStatus" class="status"></span>
     </div>
@@ -48,6 +49,16 @@
       <button class="close" aria-label="Chiudi">✕</button>
     </form>
     <div id="slots"></div>
+  </dialog>
+
+  <dialog id="tagsDialog">
+    <form method="dialog" class="dlg-head">
+      <h2>Legenda tag</h2>
+      <button class="close" aria-label="Chiudi">✕</button>
+    </form>
+    <p class="hint">Un tag per podcast o cliente, con le sue indicazioni di montaggio. Poi lo assegni agli slot dei giorni.</p>
+    <div id="tagsList"></div>
+    <div class="add"><button type="button" id="addTag">+ Nuovo tag</button></div>
   </dialog>
 
   <dialog id="settingsDialog">
