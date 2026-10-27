@@ -122,7 +122,7 @@ function renderCalendar() {
     const cell = document.createElement("div");
     cell.className = "day" + (d.getMonth() !== view.getMonth() ? " other" : "") + (k === todayK ? " today" : "");
     cell.innerHTML = `<div class="num">${d.getDate()}</div>`;
-    const list = entries(k);
+    const list = entries(k).filter((it) => it.kind === "item");
     list.slice(0, MAX_PREVIEW).forEach((it) => cell.appendChild(chip(it)));
     if (list.length > MAX_PREVIEW) {
       const more = document.createElement("div");
@@ -272,6 +272,8 @@ function toggleSlotTag(slot, tagId) {
 }
 
 // ---------- Legenda dei tag ----------
+let editingTag = null;
+
 function renderTags() {
   const box = $("tagsList");
   box.innerHTML = "";
@@ -280,28 +282,46 @@ function renderTags() {
     const card = document.createElement("div");
     card.className = "tag-card";
     card.style.setProperty("--tc", tag.color);
-    card.innerHTML = `<div class="tag-row"><input type="color" aria-label="Colore"><input class="tag-name" placeholder="Nome (es. Marchesano)"><button type="button" class="del" aria-label="Elimina tag">🗑</button></div><textarea rows="4" placeholder="Indicazioni di montaggio: stile, musiche, formato, cose da ricordare…"></textarea>`;
+
+    if (editingTag !== tag.id) {
+      card.classList.add("compact");
+      card.innerHTML = `<div class="tag-row"><strong class="tag-title"></strong><button type="button" class="edit" aria-label="Modifica tag">✏️ Modifica</button></div><div class="tag-preview"></div>`;
+      card.querySelector(".tag-title").textContent = tag.name;
+      card.querySelector(".tag-preview").textContent = (tag.notes || "").trim() || "Nessuna indicazione.";
+      card.querySelector(".edit").addEventListener("click", () => { editingTag = tag.id; renderTags(); });
+      box.appendChild(card);
+      return;
+    }
+
+    card.innerHTML = `<div class="tag-row"><input type="color" aria-label="Colore"><input class="tag-name" placeholder="Nome (es. Marchesano)"><button type="button" class="del" aria-label="Elimina tag">🗑</button></div><textarea rows="5" placeholder="Indicazioni di montaggio: stile, musiche, formato, cose da ricordare…"></textarea><div class="add"><button type="button" class="ok">✓ OK</button></div>`;
     const [color, name] = card.querySelectorAll("input");
     const notes = card.querySelector("textarea");
     color.value = tag.color;
     name.value = tag.name;
     notes.value = tag.notes || "";
-    color.addEventListener("input", () => { tag.color = color.value; card.style.setProperty("--tc", tag.color); });
-    color.addEventListener("change", () => { save(); renderAll(); });
-    name.addEventListener("change", () => { tag.name = name.value.trim() || "Senza nome"; save(); renderAll(); });
-    notes.addEventListener("change", () => { tag.notes = notes.value; save(); renderAll(); });
+    color.addEventListener("input", () => { card.style.setProperty("--tc", color.value); });
+    card.querySelector(".ok").addEventListener("click", () => {
+      tag.color = color.value;
+      tag.name = name.value.trim() || "Senza nome";
+      tag.notes = notes.value;
+      editingTag = null;
+      save(); renderTags(); renderAll();
+    });
     card.querySelector(".del").addEventListener("click", () => {
       if (!confirm(`Eliminare il tag "${tag.name}"? Sparirà anche dai giorni in cui l'hai usato.`)) return;
       tags = tags.filter((t) => t !== tag);
+      editingTag = null;
       save(); renderTags(); renderAll();
     });
     box.appendChild(card);
   });
 }
 
-$("tagsBtn").addEventListener("click", () => { renderTags(); $("tagsDialog").showModal(); });
+$("tagsBtn").addEventListener("click", () => { editingTag = null; renderTags(); $("tagsDialog").showModal(); });
 $("addTag").addEventListener("click", () => {
-  tags.push({ id: String(Date.now()), name: "Nuovo tag", color: TAG_COLORS[tags.length % TAG_COLORS.length], notes: "" });
+  const tag = { id: String(Date.now()), name: "Nuovo tag", color: TAG_COLORS[tags.length % TAG_COLORS.length], notes: "" };
+  tags.push(tag);
+  editingTag = tag.id;
   save(); renderTags(); renderAll();
   const names = $("tagsList").querySelectorAll(".tag-name");
   const last = names[names.length - 1];

@@ -98,3 +98,8 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
 .tag-row .tag-name { flex: 1; min-width: 0; }
 .tag-card input, .tag-card textarea { font: inherit; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
 .tag-card textarea { width: 100%; resize: vertical; }
+.tag-card .ok { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.tag-card .add { margin-top: 8px; justify-content: flex-end; }
+.tag-card.compact .tag-row { align-items: center; margin-bottom: 4px; }
+.tag-title { flex: 1; }
+.tag-preview { font-size: .85rem; color: var(--muted); white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
