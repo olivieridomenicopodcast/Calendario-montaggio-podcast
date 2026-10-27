@@ -13,6 +13,8 @@ const TAG_COLORS = ["#e5484d", "#f5a524", "#30a46c", "#17a2b8", "#5b5bd6", "#8e5
 // tags: [{ id, name, color, notes }]  (la legenda: indicazioni di montaggio per progetto/cliente)
 let data = load();
 let tags = loadTags();
+const HIDE_KEY = "calendario-montaggio-hide";
+let hideNames = (() => { try { return localStorage.getItem(HIDE_KEY) === "1"; } catch { return false; } })();
 let view = new Date();
 view.setDate(1);
 let openDate = null;
@@ -123,7 +125,11 @@ function renderCalendar() {
     cell.className = "day" + (d.getMonth() !== view.getMonth() ? " other" : "") + (k === todayK ? " today" : "");
     cell.innerHTML = `<div class="num">${d.getDate()}</div>`;
     const list = entries(k).filter((it) => it.kind === "item");
-    list.slice(0, MAX_PREVIEW).forEach((it) => cell.appendChild(chip(it)));
+    list.slice(0, MAX_PREVIEW).forEach((it) => {
+      const c = chip(it);
+      if (hideNames) { c.textContent = "🎙"; c.title = ""; c.classList.add("mic"); }
+      cell.appendChild(c);
+    });
     if (list.length > MAX_PREVIEW) {
       const more = document.createElement("div");
       more.className = "more";
@@ -316,6 +322,19 @@ function renderTags() {
     box.appendChild(card);
   });
 }
+
+function syncEye() {
+  const b = $("eyeBtn");
+  b.classList.toggle("off", hideNames);
+  b.setAttribute("aria-pressed", String(hideNames));
+  b.title = hideNames ? "Mostra i nomi nel calendario" : "Nascondi i nomi nel calendario";
+}
+$("eyeBtn").addEventListener("click", () => {
+  hideNames = !hideNames;
+  try { localStorage.setItem(HIDE_KEY, hideNames ? "1" : "0"); } catch {}
+  syncEye(); renderCalendar();
+});
+syncEye();
 
 $("tagsBtn").addEventListener("click", () => { editingTag = null; renderTags(); $("tagsDialog").showModal(); });
 $("addTag").addEventListener("click", () => {

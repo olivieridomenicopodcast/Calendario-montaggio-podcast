@@ -103,3 +103,6 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
 .tag-card.compact .tag-row { align-items: center; margin-bottom: 4px; }
 .tag-title { flex: 1; }
 .tag-preview { font-size: .85rem; color: var(--muted); white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.eye { position: relative; }
+.eye.off::after { content: ""; position: absolute; left: 20%; right: 20%; top: 50%; border-top: 3px solid var(--text); transform: rotate(-35deg); }
+.chip.mic { text-align: center; }
