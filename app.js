@@ -353,6 +353,7 @@ function updateSelBar() {
   const n = selected.size;
   $("selCount").textContent = n === 1 ? "1 giorno selezionato" : `${n} giorni selezionati`;
   $("selBack").disabled = $("selFwd").disabled = n === 0;
+  $("selSwap").disabled = n !== 2;
 }
 
 function shiftSelected(delta) {
@@ -370,6 +371,20 @@ function shiftSelected(delta) {
   showToast(`${n === 1 ? "1 giorno" : n + " giorni"} ${delta > 0 ? "slittati avanti" : "spostati indietro"} di un giorno`);
 }
 
+function swapSelected() {
+  if (selected.size !== 2) return;
+  const [a, b] = [...selected].sort();
+  undoSnapshot = JSON.stringify(data);
+  const da = data[a], db = data[b];
+  delete data[a]; delete data[b];
+  if (db) data[a] = db;
+  if (da) data[b] = da;
+  save(); renderAll();
+  const f = (k) => fromKey(k).toLocaleDateString("it-IT", { day: "numeric", month: "long" });
+  showToast(`Invertiti: ${f(a)} ⇄ ${f(b)}`);
+}
+
+$("selSwap").addEventListener("click", swapSelected);
 $("selFwd").addEventListener("click", () => shiftSelected(1));
 $("selBack").addEventListener("click", () => shiftSelected(-1));
 $("selDone").addEventListener("click", () => setSelecting(false));
