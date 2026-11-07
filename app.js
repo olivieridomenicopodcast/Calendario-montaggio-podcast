@@ -136,7 +136,11 @@ function renderCalendar() {
       more.textContent = `+${list.length - MAX_PREVIEW} altri`;
       cell.appendChild(more);
     }
-    cell.addEventListener("click", () => openDay(k));
+    attachLongPress(cell, k);
+    cell.addEventListener("click", () => {
+      if (cell._suppressClick) { cell._suppressClick = false; return; }
+      openDay(k);
+    });
     grid.appendChild(cell);
   }
 }
@@ -276,6 +280,92 @@ function toggleSlotTag(slot, tagId) {
   pruneDay(openDate);
   save(); renderSlots(); renderAll();
 }
+
+// ---------- Slittamento giorni (pressione prolungata su un giorno) ----------
+const addDays = (k, n) => { const d = fromKey(k); return key(new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)); };
+let moveFrom = null;
+let undoSnapshot = null;
+
+function attachLongPress(cell, k) {
+  let timer = null, sx = 0, sy = 0;
+  const cancel = () => { clearTimeout(timer); timer = null; };
+  cell.addEventListener("contextmenu", (e) => e.preventDefault());
+  cell.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    sx = e.clientX; sy = e.clientY;
+    cancel();
+    timer = setTimeout(() => { timer = null; cell._suppressClick = true; openMoveMenu(k); }, 500);
+  });
+  cell.addEventListener("pointermove", (e) => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
+  ["pointerup", "pointerleave", "pointercancel"].forEach((t) => cell.addEventListener(t, cancel));
+  // se il "click" finale cade altrove (il menu è già aperto), non lasciare il flag attivo
+  cell.addEventListener("pointerup", () => setTimeout(() => { cell._suppressClick = false; }, 400));
+}
+
+function openMoveMenu(k) {
+  moveFrom = k;
+  const label = fromKey(k).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
+  $("moveTitle").textContent = label;
+  $("moveOne").disabled = !hasContent(k);
+  $("moveDialog").showModal();
+}
+
+// Unisce il giorno `from` dentro il giorno `to` (slot per slot, voci e tag).
+function mergeDay(from, to) {
+  const src = data[from];
+  if (!src) return;
+  const dst = (data[to] ||= {});
+  SLOTS.forEach((s) => {
+    if ((src[s.id] || []).length) dst[s.id] = [...(dst[s.id] || []), ...src[s.id]];
+    const st = (src.tags || {})[s.id] || [];
+    if (st.length) {
+      const dt = ((dst.tags ||= {})[s.id] ||= []);
+      st.forEach((id) => { if (!dt.includes(id)) dt.push(id); });
+    }
+  });
+  delete data[from];
+}
+
+function shiftOne(k) {
+  mergeDay(k, addDays(k, 1));
+}
+
+function shiftFrom(k) {
+  const moved = {};
+  Object.keys(data).forEach((d) => { moved[d >= k ? addDays(d, 1) : d] = data[d]; });
+  data = moved;
+}
+
+function doShift(mode) {
+  const k = moveFrom;
+  undoSnapshot = JSON.stringify(data);
+  const prevLabel = fromKey(k).toLocaleDateString("it-IT", { day: "numeric", month: "long" });
+  if (mode === "one") shiftOne(k); else shiftFrom(k);
+  save(); renderAll();
+  $("moveDialog").close();
+  showToast(mode === "one" ? `Giorno del ${prevLabel} slittato di un giorno` : `Dal ${prevLabel} in poi: tutto slittato di un giorno`);
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = $("toast");
+  t.innerHTML = "";
+  const span = document.createElement("span");
+  span.textContent = msg;
+  const undo = document.createElement("button");
+  undo.textContent = "Annulla";
+  undo.addEventListener("click", () => {
+    if (undoSnapshot) { data = JSON.parse(undoSnapshot); undoSnapshot = null; save(); renderAll(); }
+    t.hidden = true;
+  });
+  t.append(span, undo);
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; undoSnapshot = null; }, 10000);
+}
+
+$("moveOne").addEventListener("click", () => doShift("one"));
+$("moveAll").addEventListener("click", () => doShift("all"));
 
 // ---------- Legenda dei tag ----------
 let editingTag = null;

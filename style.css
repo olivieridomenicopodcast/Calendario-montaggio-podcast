@@ -106,3 +106,10 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
 .eye { position: relative; }
 .eye.off::after { content: ""; position: absolute; left: 20%; right: 20%; top: 50%; border-top: 3px solid var(--text); transform: rotate(-35deg); }
 .chip.mic { text-align: center; }
+.day { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.move-actions { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px; }
+.move-actions button { text-align: left; padding: 12px 14px; }
+.move-actions button:disabled { opacity: .4; cursor: not-allowed; }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); width: min(480px, calc(100vw - 32px)); display: flex; align-items: center; gap: 12px; justify-content: space-between; background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.35); z-index: 10; font-size: .9rem; }
+.toast[hidden] { display: none; }
+.toast button { background: transparent; color: inherit; border-color: currentColor; padding: 4px 10px; }

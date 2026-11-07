@@ -52,6 +52,20 @@
     <div id="slots"></div>
   </dialog>
 
+  <dialog id="moveDialog">
+    <form method="dialog" class="dlg-head">
+      <h2 id="moveTitle"></h2>
+      <button class="close" aria-label="Chiudi">✕</button>
+    </form>
+    <div class="move-actions">
+      <button type="button" id="moveOne">➡️ Slitta questo giorno al giorno dopo</button>
+      <button type="button" id="moveAll">⏩ Slitta di un giorno tutto da qui in avanti</button>
+    </div>
+    <p class="hint">Le voci e i tag vengono spostati insieme. Se il giorno dopo ha già delle voci, vengono unite. Dopo lo spostamento puoi annullare.</p>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
   <dialog id="tagsDialog">
     <form method="dialog" class="dlg-head">
       <h2>Legenda tag</h2>
