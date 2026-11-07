@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Calendario montaggio podcast</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=10">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#5b5bd6">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -41,6 +41,7 @@
     <footer class="tools">
       <button id="exportBtn" class="ghost">Esporta backup</button>
       <label class="ghost btn">Importa backup<input type="file" id="importFile" accept="application/json" hidden></label>
+      <small id="ver" class="status" data-html="10"></small>
     </footer>
   </main>
 
@@ -96,6 +97,6 @@
     <div class="add"><button id="saveSettings">Salva</button><button id="clearSettings" class="ghost">Rimuovi token</button></div>
   </dialog>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

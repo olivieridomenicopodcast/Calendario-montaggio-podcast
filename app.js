@@ -1,3 +1,4 @@
+const APP_VERSION = "10";
 const STORAGE_KEY = "calendario-montaggio-v1";
 const SLOTS = [
   { id: "mattino", label: "🌅 Mattino" },
@@ -531,6 +532,11 @@ $("importFile").addEventListener("change", async (e) => {
 
 $("weekdays").innerHTML = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((d) => `<div>${d}</div>`).join("");
 renderAll();
+{
+  const v = $("ver");
+  const h = v.dataset.html;
+  v.textContent = h === APP_VERSION ? `v${APP_VERSION}` : `v${h}/${APP_VERSION} (aggiornamento a metà: ricarica la pagina)`;
+}
 
 // ---------- Sincronizzazione via GitHub Gist ----------
 const CFG_KEY = "calendario-montaggio-sync";
@@ -626,5 +632,5 @@ $("clearSettings").addEventListener("click", (e) => {
 });
 
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {});
 }
