@@ -113,3 +113,12 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); width: min(480px, calc(100vw - 32px)); display: flex; align-items: center; gap: 12px; justify-content: space-between; background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.35); z-index: 10; font-size: .9rem; }
 .toast[hidden] { display: none; }
 .toast button { background: transparent; color: inherit; border-color: currentColor; padding: 4px 10px; }
+.day.sel { outline: 3px solid var(--accent); outline-offset: -2px; background: color-mix(in srgb, var(--accent) 18%, var(--card)); }
+.selecting .day { cursor: pointer; }
+.selbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; background: var(--card); border-top: 1px solid var(--accent); box-shadow: 0 -4px 16px rgba(0,0,0,.3); }
+.selbar[hidden] { display: none; }
+.selbar span { flex: 1 1 100%; font-weight: 600; }
+.selbar button { flex: 1; }
+.selbar button:disabled { opacity: .4; }
+body.selecting { padding-bottom: 110px; }
+body.selecting .toast { bottom: 120px; }

@@ -122,7 +122,7 @@ function renderCalendar() {
     if (i >= 35 && d.getMonth() !== view.getMonth()) break;
     const k = key(d);
     const cell = document.createElement("div");
-    cell.className = "day" + (d.getMonth() !== view.getMonth() ? " other" : "") + (k === todayK ? " today" : "");
+    cell.className = "day" + (d.getMonth() !== view.getMonth() ? " other" : "") + (k === todayK ? " today" : "") + (selected.has(k) ? " sel" : "");
     cell.innerHTML = `<div class="num">${d.getDate()}</div>`;
     const list = entries(k).filter((it) => it.kind === "item");
     list.slice(0, MAX_PREVIEW).forEach((it) => {
@@ -139,6 +139,7 @@ function renderCalendar() {
     attachLongPress(cell, k);
     cell.addEventListener("click", () => {
       if (cell._suppressClick) { cell._suppressClick = false; return; }
+      if (selecting) { toggleSelected(k); return; }
       openDay(k);
     });
     grid.appendChild(cell);
@@ -291,7 +292,7 @@ function attachLongPress(cell, k) {
   const cancel = () => { clearTimeout(timer); timer = null; };
   cell.addEventListener("contextmenu", (e) => e.preventDefault());
   cell.addEventListener("pointerdown", (e) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (selecting || (e.pointerType === "mouse" && e.button !== 0)) return;
     sx = e.clientX; sy = e.clientY;
     cancel();
     timer = setTimeout(() => { timer = null; cell._suppressClick = true; openMoveMenu(k); }, 500);
@@ -312,9 +313,13 @@ function openMoveMenu(k) {
 
 // Unisce il giorno `from` dentro il giorno `to` (slot per slot, voci e tag).
 function mergeDay(from, to) {
-  const src = data[from];
-  if (!src) return;
-  const dst = (data[to] ||= {});
+  if (!data[from]) return;
+  mergeInto(data, to, data[from]);
+  delete data[from];
+}
+
+function mergeInto(map, to, src) {
+  const dst = (map[to] ||= {});
   SLOTS.forEach((s) => {
     if ((src[s.id] || []).length) dst[s.id] = [...(dst[s.id] || []), ...src[s.id]];
     const st = (src.tags || {})[s.id] || [];
@@ -323,8 +328,56 @@ function mergeDay(from, to) {
       st.forEach((id) => { if (!dt.includes(id)) dt.push(id); });
     }
   });
-  delete data[from];
 }
+
+// ---------- Selezione manuale dei giorni da slittare ----------
+let selecting = false;
+const selected = new Set();
+
+function setSelecting(on) {
+  selecting = on;
+  if (!on) selected.clear();
+  document.body.classList.toggle("selecting", on);
+  $("selBar").hidden = !on;
+  updateSelBar();
+  renderCalendar();
+}
+
+function toggleSelected(k) {
+  if (selected.has(k)) selected.delete(k); else selected.add(k);
+  updateSelBar();
+  renderCalendar();
+}
+
+function updateSelBar() {
+  const n = selected.size;
+  $("selCount").textContent = n === 1 ? "1 giorno selezionato" : `${n} giorni selezionati`;
+  $("selBack").disabled = $("selFwd").disabled = n === 0;
+}
+
+function shiftSelected(delta) {
+  if (!selected.size) return;
+  undoSnapshot = JSON.stringify(data);
+  const next = {};
+  Object.keys(data).filter((d) => !selected.has(d)).forEach((d) => { next[d] = data[d]; });
+  [...selected].sort().forEach((d) => { if (data[d]) mergeInto(next, addDays(d, delta), data[d]); });
+  const moved = [...selected].sort().map((d) => addDays(d, delta));
+  data = next;
+  selected.clear();
+  moved.forEach((d) => selected.add(d));
+  save(); updateSelBar(); renderAll();
+  const n = moved.length;
+  showToast(`${n === 1 ? "1 giorno" : n + " giorni"} ${delta > 0 ? "slittati avanti" : "spostati indietro"} di un giorno`);
+}
+
+$("selFwd").addEventListener("click", () => shiftSelected(1));
+$("selBack").addEventListener("click", () => shiftSelected(-1));
+$("selDone").addEventListener("click", () => setSelecting(false));
+$("moveSel").addEventListener("click", () => {
+  $("moveDialog").close();
+  setSelecting(true);
+  toggleSelected(moveFrom);
+});
 
 function shiftOne(k) {
   mergeDay(k, addDays(k, 1));

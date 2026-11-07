@@ -59,12 +59,20 @@
     </form>
     <div class="move-actions">
       <button type="button" id="moveOne">➡️ Slitta questo giorno al giorno dopo</button>
+      <button type="button" id="moveSel">☑ Seleziona a mano i giorni da slittare…</button>
       <button type="button" id="moveAll">⏩ Slitta di un giorno tutto da qui in avanti</button>
     </div>
     <p class="hint">Le voci e i tag vengono spostati insieme. Se il giorno dopo ha già delle voci, vengono unite. Dopo lo spostamento puoi annullare.</p>
   </dialog>
 
   <div id="toast" class="toast" hidden></div>
+
+  <div id="selBar" class="selbar" hidden>
+    <span id="selCount"></span>
+    <button type="button" id="selBack">◀ −1 giorno</button>
+    <button type="button" id="selFwd">+1 giorno ▶</button>
+    <button type="button" id="selDone" class="ghost">Fine</button>
+  </div>
 
   <dialog id="tagsDialog">
     <form method="dialog" class="dlg-head">
